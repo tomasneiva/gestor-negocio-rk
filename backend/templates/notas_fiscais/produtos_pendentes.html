@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}Produtos não cadastrados · Gestão{% endblock %}
+
+{% block content %}
+<header class="conteudo-header">
+    <h1>Produtos não cadastrados</h1>
+    <p class="conteudo-subtitulo">
+        NF {{ nota.numero|default:"(sem número)" }} — os itens abaixo têm nome diferente de qualquer peça já
+        cadastrada. Preencha e salve pra cadastrar em massa; deixe uma linha sem categoria/preço pra pular ela.
+    </p>
+</header>
+
+{% if messages %}
+<ul class="mensagens">
+    {% for m in messages %}<li class="mensagem mensagem--{{ m.tags }}">{{ m }}</li>{% endfor %}
+</ul>
+{% endif %}
+
+<form method="post" enctype="multipart/form-data" novalidate>
+    {% csrf_token %}
+    {{ formset.management_form }}
+
+    {% if formset.non_form_errors %}
+    <ul class="mensagens">
+        {% for erro in formset.non_form_errors %}<li class="mensagem mensagem--error">{{ erro }}</li>{% endfor %}
+    </ul>
+    {% endif %}
+
+    <table class="tabela" id="tabela-produtos-pendentes">
+        <thead>
+            <tr>
+                <th>Nome (da nota)</th>
+                <th>Categoria</th>
+                <th class="col-preco">Preço</th>
+                <th>Ref (interno)</th>
+                <th>Código externo</th>
+                <th>Imagem</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for form in formset %}
+            <tr>
+                {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+                <td>
+                    {{ form.nome }}
+                    {% for erro in form.nome.errors %}<p class="campo-erro-texto">{{ erro }}</p>{% endfor %}
+                </td>
+                <td>
+                    {{ form.categoria }}
+                    {% for erro in form.categoria.errors %}<p class="campo-erro-texto">{{ erro }}</p>{% endfor %}
+                </td>
+                <td class="col-preco">
+                    {{ form.preco }}
+                    {% for erro in form.preco.errors %}<p class="campo-erro-texto">{{ erro }}</p>{% endfor %}
+                </td>
+                <td>{{ form.codigo }}</td>
+                <td>
+                    {{ form.codigo_externo }}
+                    {% for erro in form.codigo_externo.errors %}<p class="campo-erro-texto">{{ erro }}</p>{% endfor %}
+                </td>
+                <td>{{ form.imagem }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="form-acoes">
+        <a href="{% url 'notas_fiscais:lista' %}" class="botao botao--secundario">Pular / voltar pra lista</a>
+        <button type="submit" class="botao">Cadastrar produtos</button>
+    </div>
+</form>
+{% endblock %}

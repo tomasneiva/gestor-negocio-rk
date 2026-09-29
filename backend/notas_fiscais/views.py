@@ -1,12 +1,28 @@
 from django.contrib import messages
 from django.core.exceptions import ValidationError
+from django.forms import modelformset_factory
 from django.shortcuts import get_object_or_404, redirect, render
 
 from clientes.models import Cliente
+from estoque.forms import PecaForm
+from estoque.models import Peca
 
 from .extracao import processar_pdf
 from .forms import NotaFiscalForm, NotaFiscalUploadForm
 from .models import NotaFiscal, NotaFiscalItem
+
+
+def _itens_sem_peca_cadastrada(nota):
+    nomes_cadastrados = {nome.strip().lower() for nome in Peca.objects.values_list("nome", flat=True)}
+    vistos = set()
+    pendentes = []
+    for item in nota.itens.all():
+        nome_normalizado = (item.descricao or "").strip().lower()
+        if not nome_normalizado or nome_normalizado in nomes_cadastrados or nome_normalizado in vistos:
+            continue
+        vistos.add(nome_normalizado)
+        pendentes.append(item)
+    return pendentes
 
 
 def lista(request):
@@ -34,10 +50,46 @@ def editar(request, pk):
         if form.is_valid():
             form.save()
             messages.success(request, "Nota fiscal atualizada com sucesso.")
+            if _itens_sem_peca_cadastrada(nota):
+                return redirect("notas_fiscais:produtos_pendentes", pk=nota.pk)
             return redirect("notas_fiscais:lista")
     else:
         form = NotaFiscalForm(instance=nota)
-    return render(request, "notas_fiscais/editar.html", {"form": form, "nota": nota})
+    itens_pendentes = _itens_sem_peca_cadastrada(nota)
+    return render(request, "notas_fiscais/editar.html", {
+        "form": form, "nota": nota, "itens_pendentes": itens_pendentes,
+    })
+
+
+def produtos_pendentes(request, pk):
+    nota = get_object_or_404(NotaFiscal, pk=pk)
+    itens_pendentes = _itens_sem_peca_cadastrada(nota)
+    if not itens_pendentes:
+        messages.info(request, "Todos os produtos desta nota já estão cadastrados no estoque.")
+        return redirect("notas_fiscais:lista")
+
+    PecaFormSet = modelformset_factory(Peca, form=PecaForm, extra=len(itens_pendentes))
+
+    initial = []
+    for item in itens_pendentes:
+        dados = {"nome": item.descricao, "codigo": item.codigo}
+        if item.valor_unitario:
+            dados["preco"] = item.valor_unitario
+        initial.append(dados)
+
+    if request.method == "POST":
+        formset = PecaFormSet(request.POST, request.FILES, queryset=Peca.objects.none(), initial=initial)
+        if formset.is_valid():
+            criadas = formset.save()
+            if criadas:
+                messages.success(request, f"{len(criadas)} produto(s) cadastrado(s) com sucesso.")
+            return redirect("notas_fiscais:produtos_pendentes", pk=nota.pk)
+    else:
+        formset = PecaFormSet(queryset=Peca.objects.none(), initial=initial)
+
+    return render(request, "notas_fiscais/produtos_pendentes.html", {
+        "nota": nota, "formset": formset,
+    })
 
 
 def _processar_e_preencher(nota):

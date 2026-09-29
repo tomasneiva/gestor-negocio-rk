@@ -619,3 +619,18 @@ input[type="date"].campo-input {
 #tabela-itens .col-preco .campo-input {
     max-width: 120px;
 }
+
+/* Cadastro em massa de produtos pendentes (notas fiscais) */
+#tabela-produtos-pendentes .campo-input {
+    width: 100%;
+    min-width: 120px;
+}
+
+#tabela-produtos-pendentes .col-preco .campo-input {
+    max-width: 110px;
+}
+
+#tabela-produtos-pendentes input[type="file"].campo-input {
+    min-width: 160px;
+    font-size: 12px;
+}

@@ -16,6 +16,15 @@
 </ul>
 {% endif %}
 
+{% if itens_pendentes %}
+<ul class="mensagens">
+    <li class="mensagem mensagem--warning">
+        {{ itens_pendentes|length }} produto(s) desta nota ainda não estão cadastrados no estoque.
+        <a href="{% url 'notas_fiscais:produtos_pendentes' nota.pk %}">Cadastrar agora</a>
+    </li>
+</ul>
+{% endif %}
+
 <form method="post" class="form-peca" novalidate>
     {% csrf_token %}
 
