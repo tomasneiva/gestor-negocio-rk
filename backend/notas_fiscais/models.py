@@ -32,6 +32,13 @@ class NotaFiscal(models.Model):
         verbose_name = "nota fiscal"
         verbose_name_plural = "notas fiscais"
         ordering = ["-criado_em"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["numero"],
+                condition=models.Q(numero__gt=""),
+                name="notafiscal_numero_unico_quando_preenchido",
+            ),
+        ]
 
     def __str__(self):
         return f"NF {self.numero or '?'} - {self.cliente or 'sem cliente'}"

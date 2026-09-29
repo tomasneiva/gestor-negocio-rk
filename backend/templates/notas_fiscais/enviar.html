@@ -8,6 +8,12 @@
     <p class="conteudo-subtitulo">Envie o PDF da NF — número, cliente, valores, chave de acesso e itens são extraídos automaticamente para você revisar em seguida.</p>
 </header>
 
+{% if messages %}
+<ul class="mensagens">
+    {% for m in messages %}<li class="mensagem mensagem--{{ m.tags }}">{{ m }}</li>{% endfor %}
+</ul>
+{% endif %}
+
 <form method="post" enctype="multipart/form-data" class="form-peca" novalidate>
     {% csrf_token %}
 

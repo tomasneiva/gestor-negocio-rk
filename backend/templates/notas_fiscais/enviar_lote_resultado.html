@@ -21,17 +21,20 @@
         <tr>
             <td>{{ r.nome }}</td>
             <td>
-                {% if r.ok %}
+                {% if r.status == "ok" %}
                 <span class="badge badge--confirmado">Registrada</span>
+                {% elif r.status == "duplicada" %}
+                <span class="badge badge--aviso">Duplicada</span>
                 {% else %}
                 <span class="badge badge--cancelado">Erro</span>
                 {% endif %}
             </td>
             <td>
-                {% if r.ok %}
+                {% if r.status == "ok" %}
                 <a href="{% url 'notas_fiscais:editar' r.nota.pk %}">NF {{ r.nota.numero|default:"(sem número)" }} — ver/editar</a>
                 {% else %}
-                {{ r.erro }}
+                {{ r.mensagem }}
+                {% if r.nota %}<br><a href="{% url 'notas_fiscais:editar' r.nota.pk %}">ver nota</a>{% endif %}
                 {% endif %}
             </td>
         </tr>

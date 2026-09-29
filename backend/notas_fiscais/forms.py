@@ -51,3 +51,11 @@ class NotaFiscalForm(forms.ModelForm):
         self.fields["cliente"].queryset = Cliente.objects.order_by("nome")
         self.fields["cliente"].required = True
         self.fields["numero"].required = True
+
+    def clean_numero(self):
+        numero = self.cleaned_data.get("numero", "").strip()
+        if numero:
+            existente = NotaFiscal.objects.filter(numero=numero).exclude(pk=self.instance.pk).first()
+            if existente:
+                raise forms.ValidationError(f"Já existe a nota fiscal #{existente.pk} com este número.")
+        return numero

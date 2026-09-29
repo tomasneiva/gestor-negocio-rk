@@ -38,10 +38,30 @@ def enviar(request):
     if request.method == "POST":
         form = NotaFiscalUploadForm(request.POST, request.FILES)
         if form.is_valid():
-            nota = form.save()
-            _processar_e_preencher(nota)
-            messages.success(request, "NF enviada e processada. Confira os dados extraídos abaixo.")
-            return redirect("notas_fiscais:editar", pk=nota.pk)
+            arquivo = form.cleaned_data["arquivo"]
+            try:
+                extraido = _extrair_do_upload(arquivo)
+            except Exception:
+                logger.exception("Falha ao processar NF enviada: %s", arquivo.name)
+                nota = form.save()
+                messages.warning(
+                    request,
+                    "Não foi possível extrair os dados automaticamente do PDF. Preencha manualmente abaixo.",
+                )
+                return redirect("notas_fiscais:editar", pk=nota.pk)
+
+            nota_existente = _nota_com_numero(extraido.numero)
+            if nota_existente:
+                messages.error(
+                    request,
+                    f"Já existe a nota fiscal #{nota_existente.pk} com o número {extraido.numero}. "
+                    "Envio cancelado para evitar duplicidade.",
+                )
+            else:
+                nota = form.save()
+                _preencher_nota(nota, extraido)
+                messages.success(request, "NF enviada e processada. Confira os dados extraídos abaixo.")
+                return redirect("notas_fiscais:editar", pk=nota.pk)
     else:
         form = NotaFiscalUploadForm()
     return render(request, "notas_fiscais/enviar.html", {"form": form})
@@ -59,15 +79,33 @@ def enviar_lote(request):
             form = NotaFiscalUploadForm(files={"arquivo": arquivo})
             if not form.is_valid():
                 erro = "; ".join(form.errors.get("arquivo", ["Arquivo inválido."]))
-                resultados.append({"nome": arquivo.name, "ok": False, "erro": erro})
+                resultados.append({"nome": arquivo.name, "status": "erro", "mensagem": erro})
                 continue
+
             try:
-                nota = form.save()
-                _processar_e_preencher(nota)
-                resultados.append({"nome": arquivo.name, "ok": True, "nota": nota})
+                extraido = _extrair_do_upload(arquivo)
             except Exception:
                 logger.exception("Falha ao processar NF em lote: %s", arquivo.name)
-                resultados.append({"nome": arquivo.name, "ok": False, "erro": "Falha ao processar o PDF."})
+                nota = form.save()
+                resultados.append({
+                    "nome": arquivo.name, "status": "erro",
+                    "mensagem": "Não foi possível extrair os dados (nota registrada, complete manualmente).",
+                    "nota": nota,
+                })
+                continue
+
+            nota_existente = _nota_com_numero(extraido.numero)
+            if nota_existente:
+                resultados.append({
+                    "nome": arquivo.name, "status": "duplicada",
+                    "mensagem": f"Já existe a NF #{nota_existente.pk} com o número {extraido.numero}.",
+                    "nota": nota_existente,
+                })
+                continue
+
+            nota = form.save()
+            _preencher_nota(nota, extraido)
+            resultados.append({"nome": arquivo.name, "status": "ok", "nota": nota})
 
         return render(request, "notas_fiscais/enviar_lote_resultado.html", {"resultados": resultados})
     return render(request, "notas_fiscais/enviar_lote.html")
@@ -122,10 +160,19 @@ def produtos_pendentes(request, pk):
     })
 
 
-def _processar_e_preencher(nota):
-    with nota.arquivo.open("rb") as arquivo:
-        extraido = processar_pdf(arquivo)
+def _nota_com_numero(numero):
+    numero = (numero or "").strip()
+    if not numero:
+        return None
+    return NotaFiscal.objects.filter(numero=numero).first()
 
+
+def _extrair_do_upload(arquivo):
+    arquivo.seek(0)
+    return processar_pdf(arquivo)
+
+
+def _preencher_nota(nota, extraido):
     nota.chave_acesso = extraido.chave_acesso
     nota.numero = extraido.numero
     nota.serie = extraido.serie

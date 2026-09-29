@@ -564,6 +564,11 @@ input[type="date"].campo-input {
     color: #991b1b;
 }
 
+.badge--aviso {
+    background: #fffbeb;
+    color: #92400e;
+}
+
 /* Filtro de status em pill (pedidos) */
 .filtro-pill {
     display: inline-block;
