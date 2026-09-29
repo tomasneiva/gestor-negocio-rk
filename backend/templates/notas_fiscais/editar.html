@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block title %}NF {{ nota.numero }} · Gestão{% endblock %}
+
+{% block content %}
+<header class="conteudo-header">
+    <h1>Nota fiscal {{ nota.numero|default:"(sem número)" }}</h1>
+    <p class="conteudo-subtitulo">
+        <a href="{{ nota.arquivo.url }}" target="_blank" rel="noopener">Ver PDF original</a>
+    </p>
+</header>
+
+{% if messages %}
+<ul class="mensagens">
+    {% for m in messages %}<li class="mensagem mensagem--{{ m.tags }}">{{ m }}</li>{% endfor %}
+</ul>
+{% endif %}
+
+<form method="post" class="form-peca" novalidate>
+    {% csrf_token %}
+
+    <fieldset class="secao-form">
+        <legend>Dados da nota</legend>
+
+        <div class="campo {% if form.cliente.errors %}campo--erro{% endif %}">
+            <label for="{{ form.cliente.id_for_label }}">Cliente *</label>
+            {{ form.cliente }}
+            {% for erro in form.cliente.errors %}<p class="campo-erro-texto">{{ erro }}</p>{% endfor %}
+        </div>
+
+        <div class="campo {% if form.numero.errors %}campo--erro{% endif %}">
+            <label for="{{ form.numero.id_for_label }}">Número *</label>
+            {{ form.numero }}
+            {% for erro in form.numero.errors %}<p class="campo-erro-texto">{{ erro }}</p>{% endfor %}
+        </div>
+
+        <div class="campo">
+            <label for="{{ form.serie.id_for_label }}">Série</label>
+            {{ form.serie }}
+        </div>
+
+        <div class="campo">
+            <label for="{{ form.data_emissao.id_for_label }}">Data de emissão</label>
+            {{ form.data_emissao }}
+        </div>
+    </fieldset>
+
+    <fieldset class="secao-form">
+        <legend>Valores</legend>
+
+        <div class="campo">
+            <label for="{{ form.valor_produtos.id_for_label }}">Valor dos produtos</label>
+            {{ form.valor_produtos }}
+        </div>
+
+        <div class="campo">
+            <label for="{{ form.desconto.id_for_label }}">Desconto</label>
+            {{ form.desconto }}
+        </div>
+
+        <div class="campo {% if form.valor_total.errors %}campo--erro{% endif %}">
+            <label for="{{ form.valor_total.id_for_label }}">Valor total *</label>
+            {{ form.valor_total }}
+            {% for erro in form.valor_total.errors %}<p class="campo-erro-texto">{{ erro }}</p>{% endfor %}
+        </div>
+    </fieldset>
+
+    <fieldset class="secao-form">
+        <legend>Outros dados extraídos</legend>
+
+        <div class="campo">
+            <label for="{{ form.chave_acesso.id_for_label }}">Chave de acesso</label>
+            {{ form.chave_acesso }}
+        </div>
+
+        <div class="campo">
+            <label for="{{ form.natureza_operacao.id_for_label }}">Natureza da operação</label>
+            {{ form.natureza_operacao }}
+        </div>
+
+        <div class="campo">
+            <label for="{{ form.observacoes.id_for_label }}">Observações</label>
+            {{ form.observacoes }}
+        </div>
+    </fieldset>
+
+    <div class="form-acoes">
+        <a href="{% url 'notas_fiscais:lista' %}" class="botao botao--secundario">Cancelar</a>
+        <button type="submit" class="botao">Salvar</button>
+    </div>
+</form>
+
+<section class="secao-itens">
+    <h2>Itens extraídos da NF ({{ nota.itens.count }})</h2>
+    <table class="tabela">
+        <thead>
+            <tr>
+                <th>Código</th>
+                <th>Descrição</th>
+                <th>NCM</th>
+                <th>CFOP</th>
+                <th>Un</th>
+                <th class="col-preco">Qtde</th>
+                <th class="col-preco">Preço un</th>
+                <th class="col-preco">Preço total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in nota.itens.all %}
+            <tr>
+                <td>{{ item.codigo }}</td>
+                <td>{{ item.descricao }}</td>
+                <td>{{ item.ncm }}</td>
+                <td>{{ item.cfop }}</td>
+                <td>{{ item.unidade }}</td>
+                <td class="col-preco">{{ item.quantidade|default:"—" }}</td>
+                <td class="col-preco">{% if item.valor_unitario %}R$ {{ item.valor_unitario|floatformat:2 }}{% else %}—{% endif %}</td>
+                <td class="col-preco">{% if item.valor_total %}R$ {{ item.valor_total|floatformat:2 }}{% else %}—{% endif %}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="8" class="vazio">Nenhum item foi identificado automaticamente no PDF.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+
+{% if nota.texto_extraido %}
+<details class="detalhes-texto">
+    <summary>Texto bruto extraído do PDF (referência)</summary>
+    <pre class="texto-extraido">{{ nota.texto_extraido }}</pre>
+</details>
+{% endif %}
+{% endblock %}

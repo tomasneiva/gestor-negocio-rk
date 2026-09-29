@@ -1,0 +1,4 @@
+<nav class="subnav">
+    <a class="subnav-link {% if ativo == "painel" %}ativo{% endif %}" href="{% url 'estoque:painel' %}">Painel de estoque</a>
+    <a class="subnav-link {% if ativo == "pecas" %}ativo{% endif %}" href="{% url 'estoque:peca_lista' %}">Peças cadastradas</a>
+</nav>

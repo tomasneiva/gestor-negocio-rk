@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Peças · Gestão{% endblock %}
+
+{% block content %}
+{% include "estoque/_subnav.html" with ativo="pecas" %}
+
+<header class="conteudo-header conteudo-header--acao">
+    <div>
+        <h1>Peças cadastradas</h1>
+        <p class="conteudo-subtitulo">Cadastro geral: nome, preço, categoria, imagem e códigos</p>
+    </div>
+    <a class="botao" href="{% url 'estoque:peca_criar' %}">+ Nova peça</a>
+</header>
+
+{% if messages %}
+<ul class="mensagens">
+    {% for m in messages %}<li class="mensagem mensagem--{{ m.tags }}">{{ m }}</li>{% endfor %}
+</ul>
+{% endif %}
+
+<table class="tabela">
+    <thead>
+        <tr>
+            <th class="col-miniatura"></th>
+            <th>Nome</th>
+            <th>Categoria</th>
+            <th class="col-preco">Preço</th>
+            <th>Ref (interno)</th>
+            <th>Código externo</th>
+            <th class="col-acao"></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for peca in pecas %}
+        <tr>
+            <td class="col-miniatura">
+                {% if peca.imagem %}
+                <img src="{{ peca.imagem.url }}" alt="{{ peca.nome }}" class="miniatura">
+                {% else %}
+                <div class="miniatura miniatura--vazia"></div>
+                {% endif %}
+            </td>
+            <td>{{ peca.nome }}</td>
+            <td>{{ peca.categoria.nome }}</td>
+            <td class="col-preco">R$ {{ peca.preco|floatformat:2 }}</td>
+            <td>{{ peca.codigo|default:"—" }}</td>
+            <td>{{ peca.codigo_externo|default:"—" }}</td>
+            <td class="col-acao"><a href="{% url 'estoque:peca_editar' peca.pk %}">editar</a></td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="7" class="vazio">Nenhuma peça cadastrada ainda.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}Notas Fiscais · Gestão{% endblock %}
+
+{% block content %}
+<header class="conteudo-header conteudo-header--acao">
+    <div>
+        <h1>Notas Fiscais</h1>
+        <p class="conteudo-subtitulo">Registro de notas fiscais recebidas</p>
+    </div>
+    <a class="botao" href="{% url 'notas_fiscais:enviar' %}">+ Enviar NF</a>
+</header>
+
+{% if messages %}
+<ul class="mensagens">
+    {% for m in messages %}<li class="mensagem mensagem--{{ m.tags }}">{{ m }}</li>{% endfor %}
+</ul>
+{% endif %}
+
+<table class="tabela">
+    <thead>
+        <tr>
+            <th>Número</th>
+            <th>Cliente</th>
+            <th>Data emissão</th>
+            <th class="col-preco">Desconto</th>
+            <th class="col-preco">Valor total</th>
+            <th class="col-acao"></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for nota in notas %}
+        <tr>
+            <td>{{ nota.numero|default:"—" }}</td>
+            <td>{{ nota.cliente.nome|default:"—" }}</td>
+            <td>{{ nota.data_emissao|date:"d/m/Y"|default:"—" }}</td>
+            <td class="col-preco">R$ {{ nota.desconto|floatformat:2 }}</td>
+            <td class="col-preco">{% if nota.valor_total %}R$ {{ nota.valor_total|floatformat:2 }}{% else %}—{% endif %}</td>
+            <td class="col-acao"><a href="{% url 'notas_fiscais:editar' nota.pk %}">ver/editar</a></td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="6" class="vazio">Nenhuma nota fiscal registrada ainda.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Estoque · Gestão{% endblock %}
+
+{% block content %}
+{% include "estoque/_subnav.html" with ativo="painel" %}
+
+<header class="conteudo-header">
+    <h1>Estoque</h1>
+    <p class="conteudo-subtitulo">Peças registradas por unidade</p>
+</header>
+
+<form id="filtros"
+      hx-get="{% url 'estoque:tabela' %}"
+      hx-target="#tabela-resultado"
+      hx-trigger="change, keyup delay:400ms from:#busca"
+      hx-push-url="true"
+      class="filtros">
+
+    <div class="unidade-tabs" role="radiogroup" aria-label="Unidade">
+        {% for unidade in unidades %}
+        <label class="unidade-tab">
+            <input type="radio" name="unidade" value="{{ unidade.id }}"
+                   {% if unidade.id|stringformat:"s" == unidade_atual_id %}checked{% endif %}>
+            <span>{{ unidade.nome }}</span>
+        </label>
+        {% empty %}
+        <p class="aviso">Nenhuma unidade cadastrada ainda. Adicione em <a href="/admin/estoque/unidade/">Cadastros</a>.</p>
+        {% endfor %}
+    </div>
+
+    <div class="filtros-linha">
+        <input type="search" id="busca" name="q" value="{{ q }}"
+               placeholder="Buscar peça pelo nome..." class="busca" autocomplete="off">
+
+        <select name="categoria" class="select">
+            <option value="">Todas as categorias</option>
+            {% for categoria in categorias %}
+            <option value="{{ categoria.id }}" {% if categoria.id|stringformat:"s" == categoria_atual_id %}selected{% endif %}>
+                {{ categoria.nome }}
+            </option>
+            {% endfor %}
+        </select>
+
+        <select name="sort" class="select">
+            <option value="nome" {% if sort == "nome" %}selected{% endif %}>Ordenar: Nome (A-Z)</option>
+            <option value="categoria" {% if sort == "categoria" %}selected{% endif %}>Ordenar: Categoria</option>
+            <option value="preco" {% if sort == "preco" %}selected{% endif %}>Ordenar: Preço</option>
+        </select>
+    </div>
+</form>
+
+<div id="tabela-resultado">
+    {% include "estoque/_tabela.html" %}
+</div>
+{% endblock %}

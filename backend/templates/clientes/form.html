@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ titulo }} · Gestão{% endblock %}
+
+{% block content %}
+<header class="conteudo-header">
+    <h1>{{ titulo }}</h1>
+</header>
+
+<form method="post" class="form-peca" novalidate>
+    {% csrf_token %}
+
+    <fieldset class="secao-form">
+        <legend>Dados principais</legend>
+
+        <div class="campo">
+            <label>Tipo de pessoa</label>
+            <div class="radios">
+                {% for radio in form.tipo_pessoa %}
+                <label class="radio-pill">{{ radio.tag }} {{ radio.choice_label }}</label>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="campo {% if form.nome.errors %}campo--erro{% endif %}">
+            <label for="{{ form.nome.id_for_label }}">Nome / razão social *</label>
+            {{ form.nome }}
+            {% for erro in form.nome.errors %}<p class="campo-erro-texto">{{ erro }}</p>{% endfor %}
+        </div>
+
+        <div class="campo {% if form.documento.errors %}campo--erro{% endif %}">
+            <label for="{{ form.documento.id_for_label }}">CPF/CNPJ *</label>
+            {{ form.documento }}
+            {% for erro in form.documento.errors %}<p class="campo-erro-texto">{{ erro }}</p>{% endfor %}
+        </div>
+    </fieldset>
+
+    <fieldset class="secao-form">
+        <legend>Endereço</legend>
+
+        <div class="campo {% if form.cep.errors %}campo--erro{% endif %}">
+            <label for="{{ form.cep.id_for_label }}">CEP *</label>
+            {{ form.cep }}
+            <p class="campo-ajuda">Digite o CEP e saia do campo — o endereço é preenchido automaticamente.</p>
+            {% for erro in form.cep.errors %}<p class="campo-erro-texto">{{ erro }}</p>{% endfor %}
+        </div>
+
+        <div class="campo">
+            <label for="{{ form.logradouro.id_for_label }}">Logradouro</label>
+            {{ form.logradouro }}
+        </div>
+
+        <div class="campo">
+            <label for="{{ form.numero.id_for_label }}">Número</label>
+            {{ form.numero }}
+        </div>
+
+        <div class="campo">
+            <label for="{{ form.complemento.id_for_label }}">Complemento</label>
+            {{ form.complemento }}
+        </div>
+
+        <div class="campo">
+            <label for="{{ form.bairro.id_for_label }}">Bairro</label>
+            {{ form.bairro }}
+        </div>
+
+        <div class="campo">
+            <label for="{{ form.cidade.id_for_label }}">Cidade</label>
+            {{ form.cidade }}
+        </div>
+
+        <div class="campo">
+            <label for="{{ form.uf.id_for_label }}">UF</label>
+            {{ form.uf }}
+        </div>
+    </fieldset>
+
+    <fieldset class="secao-form">
+        <legend>Contato</legend>
+
+        <div class="campo">
+            <label for="{{ form.telefone.id_for_label }}">Telefone</label>
+            {{ form.telefone }}
+        </div>
+
+        <div class="campo {% if form.email.errors %}campo--erro{% endif %}">
+            <label for="{{ form.email.id_for_label }}">E-mail</label>
+            {{ form.email }}
+            {% for erro in form.email.errors %}<p class="campo-erro-texto">{{ erro }}</p>{% endfor %}
+        </div>
+
+        <div class="campo">
+            <label for="{{ form.nome_representante.id_for_label }}">Nome do representante</label>
+            {{ form.nome_representante }}
+        </div>
+
+        <div class="campo">
+            <label for="{{ form.observacoes.id_for_label }}">Observações</label>
+            {{ form.observacoes }}
+        </div>
+    </fieldset>
+
+    <div class="form-acoes">
+        <a href="{% url 'clientes:lista' %}" class="botao botao--secundario">Cancelar</a>
+        <button type="submit" class="botao">Salvar</button>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/clientes.js' %}" defer></script>
+{% endblock %}

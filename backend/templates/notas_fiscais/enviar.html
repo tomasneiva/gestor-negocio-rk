@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}Enviar NF · Gestão{% endblock %}
+
+{% block content %}
+<header class="conteudo-header">
+    <h1>Enviar nota fiscal</h1>
+    <p class="conteudo-subtitulo">Envie o PDF da NF — número, cliente, valores, chave de acesso e itens são extraídos automaticamente para você revisar em seguida.</p>
+</header>
+
+<form method="post" enctype="multipart/form-data" class="form-peca" novalidate>
+    {% csrf_token %}
+
+    <div class="campo {% if form.arquivo.errors %}campo--erro{% endif %}">
+        <label for="{{ form.arquivo.id_for_label }}">Arquivo PDF da NF *</label>
+        {{ form.arquivo }}
+        {% for erro in form.arquivo.errors %}<p class="campo-erro-texto">{{ erro }}</p>{% endfor %}
+    </div>
+
+    <div class="form-acoes">
+        <a href="{% url 'notas_fiscais:lista' %}" class="botao botao--secundario">Cancelar</a>
+        <button type="submit" class="botao">Enviar e processar</button>
+    </div>
+</form>
+{% endblock %}

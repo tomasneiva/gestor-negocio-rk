@@ -1,0 +1,25 @@
+<table class="tabela">
+    <thead>
+        <tr>
+            <th>Peça</th>
+            <th>Categoria</th>
+            <th class="col-preco">Preço</th>
+            <th class="col-qtd">Quantidade</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in itens %}
+        <tr>
+            <td>{{ item.peca.nome }}</td>
+            <td>{{ item.peca.categoria.nome }}</td>
+            <td class="col-preco">R$ {{ item.peca.preco|floatformat:2 }}</td>
+            <td class="col-qtd">{{ item.quantidade }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="4" class="vazio">Nenhuma peça encontrada para esse filtro.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+<p class="contagem">{{ itens|length }} peça(s) encontrada(s)</p>

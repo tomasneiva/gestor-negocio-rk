@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}{{ titulo }} · Gestão{% endblock %}
+
+{% block content %}
+{% include "estoque/_subnav.html" with ativo="pecas" %}
+
+<header class="conteudo-header">
+    <h1>{{ titulo }}</h1>
+</header>
+
+<form method="post" enctype="multipart/form-data" class="form-peca" novalidate>
+    {% csrf_token %}
+
+    {% if peca and peca.imagem %}
+    <div class="campo">
+        <label>Imagem atual</label>
+        <img src="{{ peca.imagem.url }}" alt="{{ peca.nome }}" class="miniatura miniatura--grande">
+    </div>
+    {% endif %}
+
+    {% for field in form %}
+    <div class="campo {% if field.errors %}campo--erro{% endif %}">
+        <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} *{% endif %}</label>
+        {{ field }}
+        {% if field.help_text %}<p class="campo-ajuda">{{ field.help_text }}</p>{% endif %}
+        {% for erro in field.errors %}<p class="campo-erro-texto">{{ erro }}</p>{% endfor %}
+    </div>
+    {% endfor %}
+
+    <div class="form-acoes">
+        <a href="{% url 'estoque:peca_lista' %}" class="botao botao--secundario">Cancelar</a>
+        <button type="submit" class="botao">Salvar</button>
+    </div>
+</form>
+{% endblock %}

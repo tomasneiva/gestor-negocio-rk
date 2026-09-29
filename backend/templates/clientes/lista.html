@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}Clientes · Gestão{% endblock %}
+
+{% block content %}
+<header class="conteudo-header conteudo-header--acao">
+    <div>
+        <h1>Clientes</h1>
+        <p class="conteudo-subtitulo">Pessoas físicas e jurídicas cadastradas</p>
+    </div>
+    <a class="botao" href="{% url 'clientes:criar' %}">+ Novo cliente</a>
+</header>
+
+{% if messages %}
+<ul class="mensagens">
+    {% for m in messages %}<li class="mensagem mensagem--{{ m.tags }}">{{ m }}</li>{% endfor %}
+</ul>
+{% endif %}
+
+<table class="tabela">
+    <thead>
+        <tr>
+            <th>Nome / Razão social</th>
+            <th>Tipo</th>
+            <th>CPF/CNPJ</th>
+            <th>Cidade/UF</th>
+            <th>Telefone</th>
+            <th>E-mail</th>
+            <th class="col-acao"></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for cliente in clientes %}
+        <tr>
+            <td>{{ cliente.nome }}</td>
+            <td>{{ cliente.get_tipo_pessoa_display }}</td>
+            <td>{{ cliente.documento_formatado }}</td>
+            <td>{% if cliente.cidade %}{{ cliente.cidade }}/{{ cliente.uf }}{% else %}—{% endif %}</td>
+            <td>{{ cliente.telefone|default:"—" }}</td>
+            <td>{{ cliente.email|default:"—" }}</td>
+            <td class="col-acao"><a href="{% url 'clientes:editar' cliente.pk %}">editar</a></td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="7" class="vazio">Nenhum cliente cadastrado ainda.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

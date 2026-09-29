@@ -1,0 +1,32 @@
+{% load static %}<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Gestão{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/app.css' %}">
+    <script src="{% static 'vendor/htmx.min.js' %}" defer></script>
+    {% block extra_js %}{% endblock %}
+</head>
+<body>
+    <div class="layout">
+        <nav class="sidebar">
+            <div class="sidebar-titulo">Gestão</div>
+            <div class="sidebar-nav">
+                <a class="sidebar-link {% if request.resolver_match.app_name == 'estoque' %}ativo{% endif %}"
+                   href="{% url 'estoque:painel' %}">Estoque</a>
+                <a class="sidebar-link {% if request.resolver_match.app_name == 'clientes' %}ativo{% endif %}"
+                   href="{% url 'clientes:lista' %}">Clientes</a>
+                <a class="sidebar-link {% if request.resolver_match.app_name == 'notas_fiscais' %}ativo{% endif %}"
+                   href="{% url 'notas_fiscais:lista' %}">Notas Fiscais</a>
+                <span class="sidebar-link sidebar-link--desabilitado">Pedidos de Venda</span>
+                <span class="sidebar-link sidebar-link--desabilitado">Relatórios</span>
+            </div>
+            <a class="sidebar-link sidebar-rodape" href="/admin/">Cadastros (admin)</a>
+        </nav>
+        <main class="conteudo">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+</body>
+</html>
