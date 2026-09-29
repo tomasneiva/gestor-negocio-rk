@@ -4,6 +4,8 @@ Sistema interno de gestão: controle de estoque, cadastro de clientes (PF/PJ) e 
 
 Stack: Django + Postgres, rodando em containers Docker. Interface web própria (sem admin do Django como interface principal — o admin fica disponível como atalho de cadastro auxiliar em `/admin/`).
 
+> Retomando o projeto numa sessão nova? Veja **[HANDOFF.md](HANDOFF.md)** — histórico completo do que foi construído, decisões técnicas, bugs já corrigidos e o que falta.
+
 ## Módulos
 
 - **Estoque** (`/estoque/`) — peças cadastradas (nome, categoria, preço, imagem, código interno/externo) e controle de quantidade por unidade (Tomás / Ricardo), com busca e filtros ao vivo.
