@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Resultado do envio em massa · Gestão{% endblock %}
+
+{% block content %}
+<header class="conteudo-header">
+    <h1>Resultado do envio em massa</h1>
+    <p class="conteudo-subtitulo">{{ resultados|length }} arquivo(s) processado(s).</p>
+</header>
+
+<table class="tabela">
+    <thead>
+        <tr>
+            <th>Arquivo</th>
+            <th>Status</th>
+            <th>Nota</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for r in resultados %}
+        <tr>
+            <td>{{ r.nome }}</td>
+            <td>
+                {% if r.ok %}
+                <span class="badge badge--confirmado">Registrada</span>
+                {% else %}
+                <span class="badge badge--cancelado">Erro</span>
+                {% endif %}
+            </td>
+            <td>
+                {% if r.ok %}
+                <a href="{% url 'notas_fiscais:editar' r.nota.pk %}">NF {{ r.nota.numero|default:"(sem número)" }} — ver/editar</a>
+                {% else %}
+                {{ r.erro }}
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<div class="form-acoes">
+    <a href="{% url 'notas_fiscais:lista' %}" class="botao">Voltar pra lista</a>
+    <a href="{% url 'notas_fiscais:enviar_lote' %}" class="botao botao--secundario">Enviar mais</a>
+</div>
+{% endblock %}

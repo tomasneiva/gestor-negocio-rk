@@ -1,3 +1,5 @@
+import logging
+
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.forms import modelformset_factory
@@ -10,6 +12,8 @@ from estoque.models import Peca
 from .extracao import processar_pdf
 from .forms import NotaFiscalForm, NotaFiscalUploadForm
 from .models import NotaFiscal, NotaFiscalItem
+
+logger = logging.getLogger(__name__)
 
 
 def _itens_sem_peca_cadastrada(nota):
@@ -41,6 +45,32 @@ def enviar(request):
     else:
         form = NotaFiscalUploadForm()
     return render(request, "notas_fiscais/enviar.html", {"form": form})
+
+
+def enviar_lote(request):
+    if request.method == "POST":
+        arquivos = request.FILES.getlist("arquivos")
+        if not arquivos:
+            messages.error(request, "Selecione ao menos um arquivo PDF.")
+            return render(request, "notas_fiscais/enviar_lote.html")
+
+        resultados = []
+        for arquivo in arquivos:
+            form = NotaFiscalUploadForm(files={"arquivo": arquivo})
+            if not form.is_valid():
+                erro = "; ".join(form.errors.get("arquivo", ["Arquivo inválido."]))
+                resultados.append({"nome": arquivo.name, "ok": False, "erro": erro})
+                continue
+            try:
+                nota = form.save()
+                _processar_e_preencher(nota)
+                resultados.append({"nome": arquivo.name, "ok": True, "nota": nota})
+            except Exception:
+                logger.exception("Falha ao processar NF em lote: %s", arquivo.name)
+                resultados.append({"nome": arquivo.name, "ok": False, "erro": "Falha ao processar o PDF."})
+
+        return render(request, "notas_fiscais/enviar_lote_resultado.html", {"resultados": resultados})
+    return render(request, "notas_fiscais/enviar_lote.html")
 
 
 def editar(request, pk):

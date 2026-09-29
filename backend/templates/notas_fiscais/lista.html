@@ -8,7 +8,10 @@
         <h1>Notas Fiscais</h1>
         <p class="conteudo-subtitulo">Registro de notas fiscais recebidas</p>
     </div>
-    <a class="botao" href="{% url 'notas_fiscais:enviar' %}">+ Enviar NF</a>
+    <div class="form-acoes">
+        <a class="botao botao--secundario" href="{% url 'notas_fiscais:enviar_lote' %}">Enviar em massa</a>
+        <a class="botao" href="{% url 'notas_fiscais:enviar' %}">+ Enviar NF</a>
+    </div>
 </header>
 
 {% if messages %}

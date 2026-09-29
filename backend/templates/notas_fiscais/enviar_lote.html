@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Enviar NFs em massa · Gestão{% endblock %}
+
+{% block content %}
+<header class="conteudo-header">
+    <h1>Enviar notas fiscais em massa</h1>
+    <p class="conteudo-subtitulo">
+        Selecione vários PDFs de uma vez. Cada nota é extraída e registrada diretamente, sem passar
+        pela tela de revisão nem pela checagem de produtos não cadastrados — se precisar corrigir
+        algo depois, edite a nota normalmente pela lista.
+    </p>
+</header>
+
+{% if messages %}
+<ul class="mensagens">
+    {% for m in messages %}<li class="mensagem mensagem--{{ m.tags }}">{{ m }}</li>{% endfor %}
+</ul>
+{% endif %}
+
+<form method="post" enctype="multipart/form-data" class="form-peca" novalidate>
+    {% csrf_token %}
+
+    <div class="campo">
+        <label for="id_arquivos">Arquivos PDF *</label>
+        <input type="file" name="arquivos" id="id_arquivos" class="campo-input"
+               accept="application/pdf" multiple required>
+    </div>
+
+    <div class="form-acoes">
+        <a href="{% url 'notas_fiscais:lista' %}" class="botao botao--secundario">Cancelar</a>
+        <button type="submit" class="botao">Enviar e processar</button>
+    </div>
+</form>
+{% endblock %}
