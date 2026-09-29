@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ titulo }} · Gestão{% endblock %}
+
+{% block content %}
+<header class="conteudo-header">
+    <h1>{{ titulo }}</h1>
+</header>
+
+{% if messages %}
+<ul class="mensagens">{% for m in messages %}<li class="mensagem mensagem--{{ m.tags }}">{{ m }}</li>{% endfor %}</ul>
+{% endif %}
+
+<form method="post" class="form-peca" novalidate>
+    {% csrf_token %}
+
+    <fieldset class="secao-form">
+        <legend>Dados do pedido</legend>
+
+        <div class="campo {% if form.cliente.errors %}campo--erro{% endif %}">
+            <label for="{{ form.cliente.id_for_label }}">Cliente *</label>
+            {{ form.cliente }}
+            {% for erro in form.cliente.errors %}<p class="campo-erro-texto">{{ erro }}</p>{% endfor %}
+        </div>
+
+        <div class="campo {% if form.unidade.errors %}campo--erro{% endif %}">
+            <label for="{{ form.unidade.id_for_label }}">Unidade *</label>
+            {{ form.unidade }}
+            {% for erro in form.unidade.errors %}<p class="campo-erro-texto">{{ erro }}</p>{% endfor %}
+        </div>
+
+        <div class="campo">
+            <label for="{{ form.desconto.id_for_label }}">Desconto</label>
+            {{ form.desconto }}
+        </div>
+
+        <div class="campo">
+            <label for="{{ form.observacoes.id_for_label }}">Observações</label>
+            {{ form.observacoes }}
+        </div>
+    </fieldset>
+
+    <section class="secao-itens">
+        <h2>Itens</h2>
+        {{ formset.management_form }}
+
+        {% if formset.non_form_errors %}
+        <ul class="mensagens">{% for erro in formset.non_form_errors %}<li class="mensagem mensagem--error">{{ erro }}</li>{% endfor %}</ul>
+        {% endif %}
+
+        <table class="tabela" id="tabela-itens">
+            <thead>
+                <tr>
+                    <th>Peça</th>
+                    <th class="col-qtd">Qtde</th>
+                    <th class="col-preco">Preço unitário</th>
+                    <th class="col-acao">Excluir</th>
+                </tr>
+            </thead>
+            <tbody id="corpo-itens">
+                {% for item_form in formset %}
+                <tr class="linha-item">
+                    {% for hidden in item_form.hidden_fields %}{{ hidden }}{% endfor %}
+                    <td>
+                        {{ item_form.peca }}
+                        {% for erro in item_form.peca.errors %}<p class="campo-erro-texto">{{ erro }}</p>{% endfor %}
+                    </td>
+                    <td class="col-qtd">
+                        {{ item_form.quantidade }}
+                        {% for erro in item_form.quantidade.errors %}<p class="campo-erro-texto">{{ erro }}</p>{% endfor %}
+                    </td>
+                    <td class="col-preco">
+                        {{ item_form.preco_unitario }}
+                        {% for erro in item_form.preco_unitario.errors %}<p class="campo-erro-texto">{{ erro }}</p>{% endfor %}
+                    </td>
+                    <td class="col-acao">{% if item_form.instance.pk %}{{ item_form.DELETE }}{% endif %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <button type="button" id="botao-add-item" class="botao botao--secundario">+ Adicionar item</button>
+    </section>
+
+    <div class="form-acoes">
+        <a href="{% if pedido %}{% url 'pedidos:detalhe' pedido.pk %}{% else %}{% url 'pedidos:lista' %}{% endif %}" class="botao botao--secundario">Cancelar</a>
+        <button type="submit" class="botao">Salvar</button>
+    </div>
+</form>
+
+<template id="linha-modelo">
+    <tr class="linha-item">
+        <td>{{ formset.empty_form.peca }}</td>
+        <td class="col-qtd">{{ formset.empty_form.quantidade }}</td>
+        <td class="col-preco">{{ formset.empty_form.preco_unitario }}</td>
+        <td class="col-acao"></td>
+    </tr>
+</template>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/pedidos.js' %}" defer></script>
+{% endblock %}

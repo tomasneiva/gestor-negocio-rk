@@ -6,9 +6,9 @@ Documento de continuidade do projeto. Objetivo: qualquer pessoa (ou sessão de I
 
 ## 1. O que é o projeto
 
-Sistema interno de gestão pra Rikletz (não é SaaS, uso próprio): controle de estoque, cadastro de clientes e registro de notas fiscais recebidas. Rodando self-hosted, num servidor Docker/Portainer do próprio usuário, do mesmo jeito que ele já roda Sonarr/Radarr/Jellyfin etc.
+Sistema interno de gestão pra Rikletz (não é SaaS, uso próprio): controle de estoque, cadastro de clientes, registro de notas fiscais recebidas e pedidos de venda. Rodando self-hosted, num servidor Docker/Portainer do próprio usuário, do mesmo jeito que ele já roda Sonarr/Radarr/Jellyfin etc.
 
-Módulos planejados originalmente: estoque, notas fiscais (registro, não emissão), pedidos de venda, relatórios gerenciais. **Só os dois primeiros e clientes estão implementados até agora.**
+Módulos planejados originalmente: estoque, notas fiscais (registro, não emissão), pedidos de venda, relatórios gerenciais. **Só falta relatórios gerenciais agora.**
 
 ## 2. Stack e decisões de arquitetura
 
@@ -17,6 +17,7 @@ Módulos planejados originalmente: estoque, notas fiscais (registro, não emiss�
 - **Interatividade sem SPA**: HTMX vendorizado localmente em `backend/static/vendor/htmx.min.js` (v2.0.4, sem CDN). Usado pra busca/filtro/ordenação ao vivo (ex: painel de estoque) sem reload de página e sem precisar de build step de frontend.
 - **Imagens**: Pillow, usado em `estoque/imaging.py` pra padronizar fotos de peças (recorte central 1:1 + resize 1024×1024).
 - **Extração de PDF**: pdfplumber, usado em `notas_fiscais/extracao.py` pra ler DANFEs (nota fiscal eletrônica brasileira) — texto, não OCR (funciona porque DANFE é PDF nativo, não escaneado).
+- **Geração de PDF**: reportlab (Platypus), usado em `pedidos/pdf.py` pra gerar o PDF do pedido de venda. Escolhido em vez de WeasyPrint porque é pip-only (não exige libs de sistema tipo cairo/pango no Dockerfile).
 - **Sem frontend framework**: templates Django server-side + CSS próprio (`backend/static/css/app.css`, paleta neutra + acento indigo `#4f46e5`) + JS vanilla onde precisou (autofill de CEP).
 
 ### Layout base
@@ -59,6 +60,20 @@ Soluções usadas (documentadas no topo de `extracao.py` também):
 
 Se a extração precisar de ajuste pra outros modelos de NF/DANFE (layouts variam por software emissor, mas os rótulos são padronizados nacionalmente), esse é o ponto de partida — testar contra um PDF real seguindo o mesmo método usado aqui (ver seção 6).
 
+### 3.4 Pedidos de Venda (`backend/pedidos/`)
+
+- **Modelos**: `PedidoVenda` (cliente FK, unidade FK, status, desconto, observações) e `PedidoVendaItem` (peça FK, quantidade, preço unitário **snapshot no momento do pedido** — não segue o preço atual da peça se ela mudar depois).
+- **Fluxo de status**: `RASCUNHO → CONFIRMADO → CANCELADO`.
+  - Só dá pra editar itens/dados enquanto está em `RASCUNHO` (`pode_editar`).
+  - Confirmar exige pelo menos 1 item (`confirmar()` levanta `ValidationError` senão).
+  - Cancelar é permitido a partir de `RASCUNHO` ou `CONFIRMADO`; se o pedido já tinha baixa de estoque lançada, cancelar **desfaz a baixa automaticamente** antes de marcar como cancelado (pra nunca deixar estoque descontado de um pedido cancelado).
+- **Baixa de estoque é uma ação manual e separada da confirmação** (decisão explícita do usuário: confirmar o pedido não baixa estoque sozinho). Só é possível dar baixa com o pedido `CONFIRMADO` e que ainda não tenha baixa lançada (`pode_dar_baixa`). Tem botão de "Desfazer baixa" enquanto não for desfeita (`pode_desfazer_baixa`).
+  - `PedidoVenda.dar_baixa_estoque()`: decrementa `EstoqueItem.quantidade` de cada item na unidade do pedido. Se o estoque disponível for menor que a quantidade pedida, dá baixa só do que tem (clampa em zero, não deixa quantidade negativa) e devolve uma lista de avisos (mostrados como mensagens `warning` na tela). A quantidade efetivamente baixada de cada item fica salva em `PedidoVendaItem.quantidade_baixada` — é esse valor (não a quantidade pedida) que é usado pra reverter depois, senão "desfazer" devolveria estoque a mais em casos de baixa parcial.
+  - `PedidoVenda.desfazer_baixa_estoque()`: devolve exatamente `quantidade_baixada` de cada item ao `EstoqueItem` e limpa os campos.
+- **Geração de PDF** (`/pedidos/<id>/pdf/`): via `pedidos/pdf.py` (reportlab), disponível em qualquer status.
+- **Formulário de itens**: `inlineformset_factory` (Django puro, sem lib extra) com botão "+ Adicionar item" em JS vanilla (`static/js/pedidos.js`) que clona o `formset.empty_form` (padrão `__prefix__`) — mesmo esquema usado pelo Django admin pra formsets dinâmicos. O `<select>` de peça é um widget customizado (`PecaSelectComPreco` em `pedidos/forms.py`) que embute o preço de cada peça como `data-preco` em cada `<option>`; o JS lê esse atributo e preenche o campo de preço unitário automaticamente ao trocar a peça (só se o campo estiver vazio — não sobrescreve preço editado manualmente).
+- **Testado ponta a ponta** via script de integração rodado num Postgres efêmero na VM (criar pedido pelo formset, confirmar, dar baixa com estoque insuficiente em uma das peças, desfazer, cancelar com baixa automática revertida, gerar PDF) — todos os cenários passaram antes do deploy.
+
 ## 4. Bugs reais encontrados e corrigidos (não reintroduzir)
 
 1. **`STORAGES` no `settings.py` precisa de uma chave `"default"`** (`FileSystemStorage`) além de `"staticfiles"` — sem isso, qualquer upload de arquivo (`ImageField`/`FileField`) quebra com `InvalidStorageError` no Django 5.1.
@@ -86,14 +101,26 @@ Se a extração precisar de ajuste pra outros modelos de NF/DANFE (layouts varia
 3. **Editar e testar mudanças de código**:
    - Editar os arquivos em `D:\claude\gestao\backend\`.
    - Pra testar contra um banco real antes de dar push, dá pra `scp` os arquivos alterados pra dentro do container via `docker cp`, ou levantar uma stack local — mas o método usado até agora foi testar direto no servidor (via `docker compose exec`/`docker compose run` na VM), já que não há ambiente de desenvolvimento local separado configurado.
-4. **Gerar novas migrations** (models novos ou alterados): não dá pra rodar `makemigrations` localmente sem Django instalado nesse Windows. O método usado:
+4. **Gerar novas migrations** (models novos ou alterados): não dá pra rodar `makemigrations` localmente sem Django instalado nesse Windows. Como o deploy é via Portainer (não existe mais `/opt/docker/gestao/`), o método atual é buildar uma imagem temporária direto na VM, num diretório descartável, sem tocar nos containers de produção (`gestao-web`/`gestao-db`):
    ```bash
-   # depois de copiar o código atualizado pra VM e rodar `docker compose build web`
-   ssh vmdocker "cd /opt/docker/gestao && docker compose run --rm=false --name gestao-mkmig --entrypoint python web manage.py makemigrations <app>"
-   ssh vmdocker "docker cp gestao-mkmig:/app/<app>/migrations/000X_xxx.py /caminho/local/"
-   ssh vmdocker "docker rm -f gestao-mkmig"
+   # 1. copia o código atualizado (com o model novo) pra um dir temporário na VM
+   cd /d/claude/gestao
+   tar -czf - backend | ssh vmdocker "rm -rf /tmp/gestao-mkmig && mkdir -p /tmp/gestao-mkmig && tar -xzf - -C /tmp/gestao-mkmig"
+
+   # 2. builda uma imagem temporária a partir desse código
+   ssh vmdocker "cd /tmp/gestao-mkmig/backend && docker build -t gestao-mkmig-tmp ."
+
+   # 3. roda makemigrations (não precisa de banco real nem de rede — makemigrations só lê os arquivos de migration existentes)
+   ssh vmdocker "docker rm -f gestao-mkmig 2>/dev/null; docker run --name gestao-mkmig --entrypoint python gestao-mkmig-tmp manage.py makemigrations <app>"
+
+   # 4. copia o arquivo gerado de volta
+   ssh vmdocker "docker cp gestao-mkmig:/app/<app>/migrations/000X_xxx.py /tmp/gestao-mkmig/"
+   scp vmdocker:/tmp/gestao-mkmig/000X_xxx.py backend/<app>/migrations/
+
+   # 5. limpa tudo (container, imagem, diretório temporário) — nada disso é persistente nem afeta produção
+   ssh vmdocker "docker rm -f gestao-mkmig; docker rmi gestao-mkmig-tmp; rm -rf /tmp/gestao-mkmig"
    ```
-   Só que **agora o deploy é via Portainer**, não mais via `/opt/docker/gestao/` (que foi removido) — então pra gerar migration é preciso subir um container de teste temporário direto (ex: `docker run` a partir da imagem `gestao-web` já buildada pelo Portainer, ou reconstruir a imagem localmente de novo num diretório temporário). Ajustar esse fluxo é um bom primeiro passo se for mexer em modelos.
+   Pra validar de verdade antes de dar push (recomendado quando o model é novo/mexe em lógica de negócio), dá pra subir também um Postgres efêmero isolado numa rede Docker própria (`docker network create gestao-mkmig-net` + `docker run -d --name gestao-mkmig-db --network gestao-mkmig-net -e POSTGRES_DB=... postgres:16-alpine`), rodar `migrate` contra ele com a imagem temporária, e então rodar um script de teste via `manage.py shell -c "exec(open('/app/test.py').read())"` usando `django.test.Client` pra exercitar as views de ponta a ponta. Tudo isolado (nomes `gestao-mkmig-*`, rede própria, sem volume) — não encosta em `gestao-db`/`gestao-web` de produção. Foi assim que o módulo de pedidos foi validado antes do primeiro deploy.
 5. **Publicar uma mudança**:
    ```bash
    cd /d/claude/gestao
@@ -106,9 +133,8 @@ Se a extração precisar de ajuste pra outros modelos de NF/DANFE (layouts varia
 
 ## 7. O que falta
 
-- **Pedidos de venda** — módulo inteiro, não começado.
 - **Relatórios gerenciais** — módulo inteiro, não começado.
-- **Exclusão pela UI** de peças, clientes e notas fiscais — só existe via `/admin/` hoje.
+- **Exclusão pela UI** de peças, clientes, notas fiscais e pedidos — só existe via `/admin/` hoje.
 - **Edição manual dos itens de uma NF** já registrada (hoje só é possível ver, não editar linha a linha depois de salva).
 - **Backup do Postgres** — não configurado; dados vivem só em `/opt/docker/appdata/gestao/postgres/` no host, sem rotina de backup automatizada.
 - **Ambiente de desenvolvimento local** — hoje todo teste de mudança de backend é feito direto no servidor (VM), não há Postgres/Docker local no Windows do usuário. Se o projeto crescer, vale considerar montar isso.

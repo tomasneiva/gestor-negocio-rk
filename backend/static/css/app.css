@@ -178,6 +178,10 @@ body {
     border: 1px solid var(--cor-borda);
 }
 
+.botao--perigo {
+    background: #dc2626;
+}
+
 /* Mensagens */
 .mensagens {
     list-style: none;
@@ -202,6 +206,19 @@ body {
     background: #fef2f2;
     color: #991b1b;
     border: 1px solid #fecaca;
+}
+
+.mensagem--warning {
+    background: #fffbeb;
+    color: #92400e;
+    border: 1px solid #fde68a;
+}
+
+.mensagem--info,
+.mensagem--debug {
+    background: #eff6ff;
+    color: #1e40af;
+    border: 1px solid #bfdbfe;
 }
 
 /* Miniaturas de imagem */
@@ -520,4 +537,85 @@ input[type="date"].campo-input {
 .aviso {
     color: var(--cor-texto-muted);
     font-size: 14px;
+}
+
+/* Badges de status (pedidos) */
+.badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    vertical-align: middle;
+}
+
+.badge--rascunho {
+    background: #f0f1f3;
+    color: var(--cor-texto-muted);
+}
+
+.badge--confirmado {
+    background: #ecfdf5;
+    color: #065f46;
+}
+
+.badge--cancelado {
+    background: #fef2f2;
+    color: #991b1b;
+}
+
+/* Filtro de status em pill (pedidos) */
+.filtro-pill {
+    display: inline-block;
+    height: 36px;
+    line-height: 36px;
+    padding: 0 16px;
+    border-radius: 999px;
+    border: 1px solid var(--cor-borda);
+    background: var(--cor-superficie);
+    color: var(--cor-texto-muted);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.filtro-pill.ativo {
+    background: var(--cor-acento);
+    border-color: var(--cor-acento);
+    color: #ffffff;
+}
+
+/* Resumo de valores (pedidos) */
+.resumo-valores {
+    max-width: 320px;
+    margin: 16px 0;
+    padding: 16px 20px;
+    background: var(--cor-superficie);
+    border: 1px solid var(--cor-borda);
+    border-radius: 10px;
+}
+
+.resumo-valores p {
+    display: flex;
+    justify-content: space-between;
+    margin: 4px 0;
+    font-size: 14px;
+}
+
+.resumo-total {
+    font-weight: 700;
+    font-size: 16px !important;
+    border-top: 1px solid var(--cor-borda);
+    padding-top: 8px;
+    margin-top: 8px !important;
+}
+
+/* Formulário de pedido: itens em tabela */
+#tabela-itens .campo-input {
+    width: 100%;
+}
+
+#tabela-itens .col-qtd .campo-input,
+#tabela-itens .col-preco .campo-input {
+    max-width: 120px;
 }

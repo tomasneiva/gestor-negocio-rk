@@ -17,5 +17,6 @@ urlpatterns = [
     path("estoque/", include("estoque.urls")),
     path("clientes/", include("clientes.urls")),
     path("notas-fiscais/", include("notas_fiscais.urls")),
+    path("pedidos/", include("pedidos.urls")),
     path("media/<path:path>", serve_static, {"document_root": settings.MEDIA_ROOT}),
 ]

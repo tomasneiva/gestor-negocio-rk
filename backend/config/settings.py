@@ -25,6 +25,7 @@ INSTALLED_APPS = [
     "estoque",
     "clientes",
     "notas_fiscais",
+    "pedidos",
 ]
 
 MIDDLEWARE = [

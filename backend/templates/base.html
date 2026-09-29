@@ -19,7 +19,8 @@
                    href="{% url 'clientes:lista' %}">Clientes</a>
                 <a class="sidebar-link {% if request.resolver_match.app_name == 'notas_fiscais' %}ativo{% endif %}"
                    href="{% url 'notas_fiscais:lista' %}">Notas Fiscais</a>
-                <span class="sidebar-link sidebar-link--desabilitado">Pedidos de Venda</span>
+                <a class="sidebar-link {% if request.resolver_match.app_name == 'pedidos' %}ativo{% endif %}"
+                   href="{% url 'pedidos:lista' %}">Pedidos de Venda</a>
                 <span class="sidebar-link sidebar-link--desabilitado">Relatórios</span>
             </div>
             <a class="sidebar-link sidebar-rodape" href="/admin/">Cadastros (admin)</a>

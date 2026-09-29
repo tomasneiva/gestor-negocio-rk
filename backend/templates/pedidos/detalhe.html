@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}Pedido #{{ pedido.pk }} · Gestão{% endblock %}
+
+{% block content %}
+<header class="conteudo-header conteudo-header--acao">
+    <div>
+        <h1>Pedido #{{ pedido.pk }} <span class="badge badge--{{ pedido.status|lower }}">{{ pedido.get_status_display }}</span></h1>
+        <p class="conteudo-subtitulo">
+            {{ pedido.cliente.nome }} · {{ pedido.unidade.nome }} · criado em {{ pedido.criado_em|date:"d/m/Y H:i" }}
+        </p>
+    </div>
+    <div class="form-acoes">
+        {% if pedido.pode_editar %}
+        <a href="{% url 'pedidos:editar' pedido.pk %}" class="botao botao--secundario">Editar</a>
+        {% endif %}
+        <a href="{% url 'pedidos:pdf' pedido.pk %}" class="botao botao--secundario" target="_blank">Gerar PDF</a>
+    </div>
+</header>
+
+{% if messages %}
+<ul class="mensagens">
+    {% for m in messages %}<li class="mensagem mensagem--{{ m.tags }}">{{ m }}</li>{% endfor %}
+</ul>
+{% endif %}
+
+<table class="tabela">
+    <thead>
+        <tr>
+            <th>Peça</th>
+            <th class="col-preco">Qtde</th>
+            <th class="col-preco">Preço un.</th>
+            <th class="col-preco">Total</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in pedido.itens.all %}
+        <tr>
+            <td>{{ item.peca.nome }}</td>
+            <td class="col-preco">
+                {{ item.quantidade }}
+                {% if item.quantidade_baixada %}<br><span class="aviso">baixa: {{ item.quantidade_baixada }}</span>{% endif %}
+            </td>
+            <td class="col-preco">R$ {{ item.preco_unitario|floatformat:2 }}</td>
+            <td class="col-preco">R$ {{ item.valor_total|floatformat:2 }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="4" class="vazio">Nenhum item neste pedido.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<div class="resumo-valores">
+    <p>Subtotal: R$ {{ pedido.valor_produtos|floatformat:2 }}</p>
+    <p>Desconto: R$ {{ pedido.desconto|floatformat:2 }}</p>
+    <p class="resumo-total">Total: R$ {{ pedido.valor_total|floatformat:2 }}</p>
+</div>
+
+{% if pedido.observacoes %}
+<p><strong>Observações:</strong> {{ pedido.observacoes }}</p>
+{% endif %}
+
+<section class="secao-itens">
+    <h2>Ações</h2>
+    <div class="form-acoes">
+        {% if pedido.pode_confirmar %}
+        <form method="post" action="{% url 'pedidos:confirmar' pedido.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="botao">Confirmar pedido</button>
+        </form>
+        {% endif %}
+
+        {% if pedido.pode_dar_baixa %}
+        <form method="post" action="{% url 'pedidos:baixa_estoque' pedido.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="botao">Dar baixa no estoque</button>
+        </form>
+        {% endif %}
+
+        {% if pedido.pode_desfazer_baixa %}
+        <form method="post" action="{% url 'pedidos:desfazer_baixa' pedido.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="botao botao--secundario">Desfazer baixa de estoque</button>
+        </form>
+        {% endif %}
+
+        {% if pedido.pode_cancelar %}
+        <form method="post" action="{% url 'pedidos:cancelar' pedido.pk %}" onsubmit="return confirm('Cancelar este pedido?');">
+            {% csrf_token %}
+            <button type="submit" class="botao botao--perigo">Cancelar pedido</button>
+        </form>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}
