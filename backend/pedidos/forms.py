@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django import forms
 from django.forms import inlineformset_factory
 
@@ -31,6 +33,9 @@ class PedidoVendaForm(forms.ModelForm):
             "unidade": forms.Select(attrs={"class": "campo-input"}),
             "observacoes": forms.Textarea(attrs={"class": "campo-input", "rows": 3}),
         }
+
+    def clean_desconto(self):
+        return self.cleaned_data.get("desconto") or Decimal("0")
 
 
 class PedidoVendaItemForm(forms.ModelForm):
