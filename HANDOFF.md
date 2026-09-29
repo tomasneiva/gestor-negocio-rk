@@ -74,12 +74,19 @@ Se a extração precisar de ajuste pra outros modelos de NF/DANFE (layouts varia
 - **Formulário de itens**: `inlineformset_factory` (Django puro, sem lib extra) com botão "+ Adicionar item" em JS vanilla (`static/js/pedidos.js`) que clona o `formset.empty_form` (padrão `__prefix__`) — mesmo esquema usado pelo Django admin pra formsets dinâmicos. O `<select>` de peça é um widget customizado (`PecaSelectComPreco` em `pedidos/forms.py`) que embute o preço de cada peça como `data-preco` em cada `<option>`; o JS lê esse atributo e preenche o campo de preço unitário automaticamente ao trocar a peça (só se o campo estiver vazio — não sobrescreve preço editado manualmente).
 - **Testado ponta a ponta** via script de integração rodado num Postgres efêmero na VM (criar pedido pelo formset, confirmar, dar baixa com estoque insuficiente em uma das peças, desfazer, cancelar com baixa automática revertida, gerar PDF) — todos os cenários passaram antes do deploy.
 
+### 3.5 Sistema / versionamento (`backend/sistema/`)
+
+- **Modelo `VersaoSistema`** (`numero`, `descricao`, `implantado_em` auto_now_add): um registro por deploy, criado via **migration de dados** (não manualmente, não via admin — o `VersaoSistemaAdmin` é somente leitura, sem add/change/delete). Numeração: `v1`, `v1.01`, `v1.02`, ... (incrementos de 0,01 a cada deploy, decisão do usuário em 2026-09-29).
+- **Onde aparece**: `{% versao_atual %}` (template tag em `sistema/templatetags/versao_tags.py`) é usada em dois lugares — no rodapé da sidebar (`templates/base.html`, substituindo o texto fixo "v1.0.1" que existia antes) e no cabeçalho do `/admin/` (`templates/admin/base_site.html`, um override do template padrão do Django admin, mostra "Versão X — atualizado em DD/MM/AAAA HH:MM").
+- **Fluxo obrigatório a cada deploy** (não é automático — é responsabilidade de quem fizer o deploy, humano ou IA): criar uma nova migration de dados em `sistema/migrations/`, ex. `0003_versao_v101.py`, seguindo o padrão de `0002_versao_v1.py` (RunPython com `get_or_create` pelo `numero`, e a função reversa fazendo `filter(...).delete()`). Essas migrations são pequenas o suficiente pra escrever à mão, sem precisar do fluxo de `makemigrations` via VM (só usar esse fluxo quando o `models.py` em si mudar). Como o `entrypoint.sh` roda `migrate --noinput` toda vez que o container sobe, a versão nova aparece automaticamente assim que o Portainer faz "Pull and redeploy" — não precisa de nenhum passo manual além de commitar a migration.
+
 ## 4. Bugs reais encontrados e corrigidos (não reintroduzir)
 
 1. **`STORAGES` no `settings.py` precisa de uma chave `"default"`** (`FileSystemStorage`) além de `"staticfiles"` — sem isso, qualquer upload de arquivo (`ImageField`/`FileField`) quebra com `InvalidStorageError` no Django 5.1.
 2. **`DecimalField` em formulário Django não aceita vírgula decimal por padrão**, mesmo com `LANGUAGE_CODE="pt-br"` — precisa `localize=True` no campo do form **e** `USE_THOUSAND_SEPARATOR=True` no settings pra aceitar formatos tipo `1.234,56`.
 3. **Mídia (`MEDIA_URL`) não é servida automaticamente com `DEBUG=False`** — foi adicionado um `path("media/<path:path>", serve_static, ...)` manual em `config/urls.py`. Aceitável pra essa escala de app interno (poucos usuários, LAN); não é a forma correta pra produção de alto tráfego (aí seria Nginx/S3/etc).
 4. **`.create()` do Django não roda `Model.clean()`** — a criação automática de `Cliente` a partir de dados extraídos de PDF usa `full_clean()` explícito antes de salvar, senão a validação de CPF/CNPJ seria pulada nesse caminho.
+5. **Campo de formulário `required=False` não é o mesmo que o model aceitar `NULL`** — `PedidoVendaForm.desconto` era `DecimalField(required=False)`, mas `PedidoVenda.desconto` no model é `default=0` sem `null=True`. Deixar o campo em branco no forma gerava `cleaned_data["desconto"] = None`, e o `.save()` batia num `IntegrityError`/`NotNullViolation` direto no Postgres — erro 500 instantâneo, sem exceção Python "normal" nem hang (achado em produção em 2026-09-29, ver diagnóstico abaixo). Corrigido com `clean_desconto()` normalizando `None` pra `Decimal("0")`. Regra geral: todo `DecimalField`/`IntegerField` opcional no form que tem `default` (não `null=True`) no model precisa de um `clean_<campo>()` assim, ou setar o form field como `required=True` com o `initial` já preenchido.
 
 ## 5. Infraestrutura e deploy
 
@@ -121,7 +128,8 @@ Se a extração precisar de ajuste pra outros modelos de NF/DANFE (layouts varia
    ssh vmdocker "docker rm -f gestao-mkmig; docker rmi gestao-mkmig-tmp; rm -rf /tmp/gestao-mkmig"
    ```
    Pra validar de verdade antes de dar push (recomendado quando o model é novo/mexe em lógica de negócio), dá pra subir também um Postgres efêmero isolado numa rede Docker própria (`docker network create gestao-mkmig-net` + `docker run -d --name gestao-mkmig-db --network gestao-mkmig-net -e POSTGRES_DB=... postgres:16-alpine`), rodar `migrate` contra ele com a imagem temporária, e então rodar um script de teste via `manage.py shell -c "exec(open('/app/test.py').read())"` usando `django.test.Client` pra exercitar as views de ponta a ponta. Tudo isolado (nomes `gestao-mkmig-*`, rede própria, sem volume) — não encosta em `gestao-db`/`gestao-web` de produção. Foi assim que o módulo de pedidos foi validado antes do primeiro deploy.
-5. **Publicar uma mudança**:
+5. **Antes de publicar, incrementar a versão** (ver seção 3.5): criar `sistema/migrations/000X_versao_vX_XX.py` (copiar o padrão de `0002_versao_v1.py`, só troca o `numero` e a `descricao`). Fazer isso em **todo** deploy, mesmo quando não mexeu em nenhum model — é o que faz o indicador de versão na sidebar e no `/admin/` significar algo.
+6. **Publicar uma mudança**:
    ```bash
    cd /d/claude/gestao
    git add -A && git commit -m "..."
@@ -129,7 +137,16 @@ Se a extração precisar de ajuste pra outros modelos de NF/DANFE (layouts varia
    ```
    `git push` costuma ser bloqueado pelo classificador de modo automático do Claude Code mesmo com confirmação em texto do usuário — se acontecer, tentar de novo uma vez, ou pedir pro usuário rodar via `! <comando>` no prompt.
    Depois do push, **avisar o usuário pra clicar em "Pull and redeploy" na Stack `gestao` do Portainer** (não acontece sozinho por causa do polling de 72h).
-6. **Verificar que subiu**: `curl http://192.168.0.191:8100/health/` deve responder `{"status": "ok"}`. Conferir dados existentes não sumiram (ex: `curl http://192.168.0.191:8100/estoque/pecas/`).
+7. **Verificar que subiu**: `curl http://192.168.0.191:8100/health/` deve responder `{"status": "ok"}`. Conferir dados existentes não sumiram (ex: `curl http://192.168.0.191:8100/estoque/pecas/`). Conferir a versão nova na sidebar ou no `/admin/`.
+
+### Diagnosticar um erro 500 em produção
+
+`DEBUG=False`, então o navegador só mostra "Server Error (500)" genérico — sem stack trace nenhum pro usuário. Passos, na ordem:
+
+1. `ssh vmdocker "docker logs gestao-web --tail 200"` — Django loga exceções não tratadas com traceback completo no console por padrão (não precisa de `LOGGING` customizado nem de `DEBUG=True` pra isso), então na maioria das vezes o traceback já está ali.
+2. Se não aparecer nada óbvio (aconteceu uma vez, ver bug #5 acima — o erro era rápido mas ficou "escondido" por causa de ruído de `WORKER TIMEOUT` do Gunicorn não relacionado, uma instabilidade à parte causada por outro container da VM competindo por CPU), acompanhar ao vivo enquanto o usuário reproduz: `ssh vmdocker "docker logs -f gestao-web"` (rodar em background) e pedir pra tentar de novo.
+3. Se mesmo assim não aparecer nada, adicionar prints temporários nas views suspeitas (`print(..., flush=True)` — `PYTHONUNBUFFERED=1` já está no Dockerfile, aparece na hora no `docker logs`) e habilitar o access log verboso do gunicorn temporariamente em `entrypoint.sh` (`--access-logfile - --error-logfile - --log-level debug`), fazer deploy, reproduzir, **depois reverter os dois** (`git checkout <commit-anterior> -- backend/entrypoint.sh backend/pedidos/views.py` ou equivalente) antes de seguir — não é pra ficar em produção.
+4. Pra reproduzir um POST específico sem afetar dados reais, dá pra rodar contra o banco de produção dentro de uma transação com rollback forçado: `docker exec gestao-web python manage.py shell -c "..."` usando `django.test.Client(SERVER_NAME='192.168.0.191')` (precisa bater com `DJANGO_ALLOWED_HOSTS`) dentro de `with transaction.atomic(): ... finally: transaction.set_rollback(True)`. É assim que o bug do desconto em branco foi confirmado e depois validado como corrigido, sem sujar o banco real.
 
 ## 7. O que falta
 

@@ -1,4 +1,4 @@
-{% load static %}<!DOCTYPE html>
+{% load static versao_tags %}<!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
@@ -24,7 +24,8 @@
                 <span class="sidebar-link sidebar-link--desabilitado">Relatórios</span>
             </div>
             <a class="sidebar-link sidebar-rodape" href="/admin/">Cadastros (admin)</a>
-            <div class="sidebar-versao">v1.0.1</div>
+            {% versao_atual as versao %}
+            <div class="sidebar-versao">{% if versao %}{{ versao.numero }} · {{ versao.implantado_em|date:"d/m/Y" }}{% else %}—{% endif %}</div>
         </nav>
         <main class="conteudo">
             {% block content %}{% endblock %}
