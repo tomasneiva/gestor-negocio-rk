@@ -90,6 +90,12 @@ body {
     padding-top: 16px;
 }
 
+.sidebar-versao {
+    padding: 4px 12px 0;
+    font-size: 11px;
+    color: #565c6b;
+}
+
 /* Conteúdo */
 .conteudo {
     flex: 1;
